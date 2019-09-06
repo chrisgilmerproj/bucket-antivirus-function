@@ -170,6 +170,14 @@ following policy document
       },
       {
          "Action":[
+            "s3:GetObject",
+            "s3:GetObjectTagging",
+         ],
+         "Effect":"Allow",
+         "Resource": ["arn:aws:s3:::<av-definition-s3-bucket>/*"]
+      },
+      {
+         "Action":[
             "kms:Decrypt",
          ],
          "Effect":"Allow",
