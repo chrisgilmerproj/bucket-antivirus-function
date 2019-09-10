@@ -48,9 +48,24 @@ def object_previously_scanned(s3_bucket_name, key_name):
     s3_object_tags = s3_client.get_object_tagging(Bucket=s3_bucket_name, Key=key_name)
     if "TagSet" not in s3_object_tags:
         return False
+    tags = {}
     for tag in s3_object_tags["TagSet"]:
-        if tag["Key"] in [AV_STATUS_METADATA, AV_TIMESTAMP_METADATA]:
-            return True
+        tags[tag["Key"]] = tag["Value"]
+
+    # If all tags are present then it has been scanned
+    expected_tags = [AV_STATUS_METADATA, AV_TIMESTAMP_METADATA, AV_SIGNATURE_METADATA]
+    if set(expected_tags) - set(tags.keys()) == set():
+        return True
+
+    # If AV Status is CLEAN then it has been scanned
+    if tags.get(AV_STATUS_METADATA, "") == AV_STATUS_CLEAN:
+        return True
+
+    # If AV Status is INFECTED then it msut include the AV Signature
+    if AV_SIGNATURE_METADATA in tags:
+        return True
+
+    # Either not scanned or needs to be scanned again
     return False
 
 
