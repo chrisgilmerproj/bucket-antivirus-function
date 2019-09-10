@@ -36,8 +36,9 @@ def get_objects(s3_bucket_name):
         for key in s3_list_objects_result["Contents"]:
             key_name = key["Key"]
             # Include only infected objects
-            if object_infected(s3_bucket_name, key_name):
-                s3_object_list.append(key_name)
+            infected, av_signature = object_infected(s3_bucket_name, key_name)
+            if infected:
+                s3_object_list.append((key_name, av_signature))
 
     return s3_object_list
 
@@ -46,13 +47,21 @@ def get_objects(s3_bucket_name):
 def object_infected(s3_bucket_name, key_name):
     s3_object_tags = s3_client.get_object_tagging(Bucket=s3_bucket_name, Key=key_name)
     if "TagSet" not in s3_object_tags:
-        return False
+        return False, None
+    tags = {}
     for tag in s3_object_tags["TagSet"]:
-        if tag["Key"] == AV_STATUS_METADATA:
-            if tag["Value"] == AV_STATUS_INFECTED:
-                return True
-            return False
-    return False
+        tags[tag["Key"]] = tag["Value"]
+
+    if tags.get(AV_STATUS_METADATA, "") == AV_STATUS_CLEAN:
+        return False, None
+
+    if AV_SIGNATURE_METADATA in tags:
+        return True, tags[AV_SIGNATURE_METADATA]
+
+    if tags.get(AV_STATUS_METADATA, "") == AV_STATUS_INFECTED:
+        return False, "UNKNOWN - RESCAN REQUIRED"
+
+    return False, None
 
 
 def main(s3_bucket_name):
@@ -66,8 +75,8 @@ def main(s3_bucket_name):
 
     # Scan the objects in the bucket
     s3_object_list = get_objects(s3_bucket_name)
-    for key_name in s3_object_list:
-        print("Infected: {}/{}".format(s3_bucket_name, key_name))
+    for (key_name, av_signature) in s3_object_list:
+        print("Infected: {}/{}, {}".format(s3_bucket_name, key_name, av_signature))
 
 
 if __name__ == "__main__":
