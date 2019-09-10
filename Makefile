@@ -37,3 +37,6 @@ else
 		amazonlinux:$(AMZ_LINUX_VERSION) \
 		/bin/bash -c "cd $(container_dir) && ./build_lambda.sh"
 endif
+
+test:
+	@nosetests

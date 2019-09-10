@@ -72,6 +72,7 @@ def verify_s3_object_version(s3_object):
             )
 
 
+
 def download_s3_object(s3_object, local_prefix):
     local_path = "%s/%s/%s" % (local_prefix, s3_object.bucket_name, s3_object.key)
     create_dir(os.path.dirname(local_path))
@@ -114,7 +115,7 @@ def set_av_tags(s3_object, result):
     )["TagSet"]
     new_tags = copy.copy(curr_tags)
     for tag in curr_tags:
-        if tag["Key"] in [AV_STATUS_METADATA, AV_TIMESTAMP_METADATA]:
+        if tag["Key"] in [AV_STATUS_METADATA, AV_TIMESTAMP_METADATA, AV_SIGNATURE_METADATA]:
             new_tags.remove(tag)
     new_tags.append({"Key": AV_STATUS_METADATA, "Value": result})
     new_tags.append(
@@ -151,10 +152,10 @@ def sns_scan_results(s3_object, result):
     if AV_STATUS_SNS_ARN in [None, ""]:
         return
     # Don't publish if result is CLEAN and CLEAN results should not be published
-    if result == AV_STATUS_CLEAN and not str_to_bool(AV_STATUS_SNS_PUBLISH_CLEAN):
+    if scan_result == AV_STATUS_CLEAN and not str_to_bool(AV_STATUS_SNS_PUBLISH_CLEAN):
         return
     # Don't publish if result is INFECTED and INFECTED results should not be published
-    if result == AV_STATUS_INFECTED and not str_to_bool(AV_STATUS_SNS_PUBLISH_INFECTED):
+    if scan_result == AV_STATUS_INFECTED and not str_to_bool(AV_STATUS_SNS_PUBLISH_INFECTED):
         return
     message = {
         "bucket": s3_object.bucket_name,
@@ -163,6 +164,8 @@ def sns_scan_results(s3_object, result):
         AV_STATUS_METADATA: result,
         AV_TIMESTAMP_METADATA: datetime.utcnow().strftime("%Y/%m/%d %H:%M:%S UTC"),
     }
+    if scan_result == AV_STATUS_INFECTED:
+        message[AV_SIGNATURE_METADATA] = scan_signature
     sns_client = boto3.client("sns")
     sns_client.publish(
         TargetArn=AV_STATUS_SNS_ARN,
@@ -204,6 +207,7 @@ def lambda_handler(event, context):
     print(
         "Script finished at %s\n" % datetime.utcnow().strftime("%Y/%m/%d %H:%M:%S UTC")
     )
+
 
 
 def str_to_bool(s):
