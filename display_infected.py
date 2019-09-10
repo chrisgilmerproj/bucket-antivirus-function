@@ -20,7 +20,7 @@ from common import *  # noqa
 
 
 # Get all objects in an S3 bucket that are infected
-def get_objects(s3_bucket_name):
+def get_objects_and_sigs(s3_bucket_name):
 
     s3_object_list = []
 
@@ -74,8 +74,8 @@ def main(s3_bucket_name):
         sys.exit(1)
 
     # Scan the objects in the bucket
-    s3_object_list = get_objects(s3_bucket_name)
-    for (key_name, av_signature) in s3_object_list:
+    s3_object_and_sigs_list = get_objects_and_sigs(s3_bucket_name)
+    for (key_name, av_signature) in s3_object_and_sigs_list:
         print("Infected: {}/{}, {}".format(s3_bucket_name, key_name, av_signature))
 
 
