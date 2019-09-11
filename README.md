@@ -174,7 +174,9 @@ following policy document
             "s3:GetObjectTagging",
          ],
          "Effect":"Allow",
-         "Resource": ["arn:aws:s3:::<av-definition-s3-bucket>/*"]
+         "Resource": [
+           "arn:aws:s3:::<av-definition-s3-bucket>/*"
+         ]
       },
       {
          "Action":[
