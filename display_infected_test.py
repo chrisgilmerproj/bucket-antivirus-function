@@ -19,6 +19,7 @@ import unittest
 import botocore.session
 from botocore.stub import Stubber
 
+from common import AV_STATUS_CLEAN
 from common import AV_STATUS_METADATA
 from common import AV_STATUS_INFECTED
 from display_infected import get_objects
@@ -30,7 +31,6 @@ class TestDisplayInfected(unittest.TestCase):
         self.s3_client = botocore.session.get_session().create_client("s3")
         self.stubber = Stubber(self.s3_client)
 
-    def test_get_objects(self):
         list_objects_v2_response = {
             "IsTruncated": False,
             "Contents": [
@@ -53,6 +53,8 @@ class TestDisplayInfected(unittest.TestCase):
             "list_objects_v2", list_objects_v2_response, list_objects_v2_expected_params
         )
 
+    def test_get_objects_infected(self):
+
         get_object_tagging_response = {
             "VersionId": "abc123",
             "TagSet": [{"Key": AV_STATUS_METADATA, "Value": AV_STATUS_INFECTED}],
@@ -70,4 +72,43 @@ class TestDisplayInfected(unittest.TestCase):
         with self.stubber:
             s3_object_list = get_objects(self.s3_client, self.s3_bucket_name)
             expected_object_list = ["test.txt"]
+            self.assertEqual(s3_object_list, expected_object_list)
+
+    def test_get_objects_clean(self):
+
+        get_object_tagging_response = {
+            "VersionId": "abc123",
+            "TagSet": [{"Key": AV_STATUS_METADATA, "Value": AV_STATUS_CLEAN}],
+        }
+        get_object_tagging_expected_params = {
+            "Bucket": self.s3_bucket_name,
+            "Key": "test.txt",
+        }
+        self.stubber.add_response(
+            "get_object_tagging",
+            get_object_tagging_response,
+            get_object_tagging_expected_params,
+        )
+
+        with self.stubber:
+            s3_object_list = get_objects(self.s3_client, self.s3_bucket_name)
+            expected_object_list = []
+            self.assertEqual(s3_object_list, expected_object_list)
+
+    def test_get_objects_unscanned(self):
+
+        get_object_tagging_response = {"VersionId": "abc123", "TagSet": []}
+        get_object_tagging_expected_params = {
+            "Bucket": self.s3_bucket_name,
+            "Key": "test.txt",
+        }
+        self.stubber.add_response(
+            "get_object_tagging",
+            get_object_tagging_response,
+            get_object_tagging_expected_params,
+        )
+
+        with self.stubber:
+            s3_object_list = get_objects(self.s3_client, self.s3_bucket_name)
+            expected_object_list = []
             self.assertEqual(s3_object_list, expected_object_list)
